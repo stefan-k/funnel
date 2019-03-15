@@ -1,0 +1,12 @@
+[package]
+name = "funnel"
+version = "0.1.0"
+authors = ["Stefan Kroboth <stefan.kroboth@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "*"
+slog = "*"
+slog-term = "*"
+slog-async = "*"
+lazy_static = "1.3.0"
