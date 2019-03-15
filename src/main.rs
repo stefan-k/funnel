@@ -11,9 +11,11 @@
 
 #![feature(never_type)]
 
+mod queue;
 mod scheduler;
 mod sequence;
 
+use crate::queue::Queue;
 use crate::scheduler::Scheduler;
 use crate::sequence::Sequence;
 use failure::Error;
@@ -33,40 +35,6 @@ lazy_static! {
         let drain = slog_async::Async::new(drain).build().fuse();
         slog::Logger::root(drain, o!())
     };
-}
-
-struct Queue {
-    q: Vec<Sequence>,
-}
-
-impl Queue {
-    pub fn new() -> Queue {
-        Queue { q: vec![] }
-    }
-
-    pub fn push(&mut self, seq: Sequence) -> bool {
-        if !self.q.contains(&seq) {
-            self.q.push(seq);
-            return true;
-        }
-        false
-    }
-
-    pub fn pop(&mut self) -> Option<Sequence> {
-        if self.q.len() > 0 {
-            Some(self.q.remove(0))
-        } else {
-            None
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.q.len()
-    }
-
-    pub fn dump(&mut self) {
-        self.q = vec![];
-    }
 }
 
 fn is_empty(path: &Path) -> Result<bool, Error> {
