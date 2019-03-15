@@ -1,4 +1,4 @@
-// Copyright 2018 Stefan Kroboth
+// Copyright 2019 Stefan Kroboth
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -12,8 +12,10 @@
 #![feature(never_type)]
 
 mod scheduler;
+mod sequence;
 
 use crate::scheduler::Scheduler;
+use crate::sequence::Sequence;
 use failure::Error;
 use lazy_static::lazy_static;
 use slog::{info, o, Drain};
@@ -31,17 +33,6 @@ lazy_static! {
         let drain = slog_async::Async::new(drain).build().fuse();
         slog::Logger::root(drain, o!())
     };
-}
-
-#[derive(Eq, PartialEq)]
-struct Sequence {
-    name: String,
-}
-
-impl Sequence {
-    pub fn new(name: String) -> Self {
-        Sequence { name }
-    }
 }
 
 struct Queue {

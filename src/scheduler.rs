@@ -1,4 +1,4 @@
-// Copyright 2018 Stefan Kroboth
+// Copyright 2019 Stefan Kroboth
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -137,10 +137,10 @@ impl Scheduler {
         if is_empty(&self.outbox)? {
             if let Some(seq) = self.q.pop() {
                 rename(
-                    &self.queued.join(&seq.name),
+                    &self.queued.join(&seq.get_name()),
                     &self.outbox.join("external.txt"),
                 )?;
-                info!(LOG, "Scheduling: {}", seq.name);
+                info!(LOG, "Scheduling: {}", seq.get_name());
                 changes = true;
             }
         }
