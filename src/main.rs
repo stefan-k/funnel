@@ -5,6 +5,10 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+//! funnel
+//!
+//! A likely error-prone bottleneck.
+
 use failure::Error;
 use lazy_static::lazy_static;
 use slog::{info, o, Drain};
@@ -17,7 +21,6 @@ const QUEUED: &'static str = "queued/";
 
 lazy_static! {
     static ref LOG: slog::Logger = {
-        // set up logging
         let decorator = slog_term::TermDecorator::new().build();
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
