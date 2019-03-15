@@ -9,6 +9,7 @@
 //!
 //! A likely error-prone bottleneck.
 
+#![feature(never_type)]
 use failure::Error;
 use lazy_static::lazy_static;
 use slog::{info, o, Drain};
@@ -28,6 +29,7 @@ lazy_static! {
     };
 }
 
+#[derive(Eq, PartialEq)]
 struct Sequence {
     name: String,
 }
@@ -47,8 +49,12 @@ impl Queue {
         Queue { q: vec![] }
     }
 
-    pub fn push(&mut self, seq: Sequence) {
-        self.q.push(seq);
+    pub fn push(&mut self, seq: Sequence) -> bool {
+        if !self.q.contains(&seq) {
+            self.q.push(seq);
+            return true;
+        }
+        false
     }
 
     pub fn pop(&mut self) -> Option<Sequence> {
@@ -103,13 +109,15 @@ impl Scheduler {
     }
 
     pub fn outbox(mut self, dir: &str) -> Self {
-        self.queued = PathBuf::from(dir);
+        self.outbox = PathBuf::from(dir);
         self
     }
 
-    pub fn run(mut self) -> Result<(), Error> {
+    pub fn run(mut self) -> Result<!, Error> {
         info!(LOG, "Your choices for the directories were: ");
-        info!(LOG, ""; "inbox" => INBOX, "queued" => QUEUED, "outbox" => OUTBOX);
+        info!(LOG, ""; "inbox" => self.inbox.to_str().unwrap(),
+                       "queued" => self.queued.to_str().unwrap(),
+                       "outbox" => self.outbox.to_str().unwrap());
 
         self.make_dirs()?;
         self.collect_leftovers()?;
@@ -129,11 +137,7 @@ impl Scheduler {
             }
 
             std::thread::sleep(std::time::Duration::from_millis(500));
-
-            break;
         }
-
-        Ok(())
     }
 
     fn make_dirs(&mut self) -> Result<(), Error> {
@@ -193,7 +197,9 @@ impl Scheduler {
                 let filename = path.file_name().unwrap().to_str().unwrap();
                 info!(LOG, "New sequence: {}", filename);
                 rename(&path, &self.queued.join(&filename))?;
-                self.q.push(Sequence::new(filename.to_string()));
+                if !self.q.push(Sequence::new(filename.to_string())) {
+                    info!(LOG, "File {} already in queue!", filename);
+                }
                 changes = true;
             }
         }
@@ -234,74 +240,11 @@ fn run() -> Result<(), Error> {
     info!(LOG, "| I'm funnel, a likely error-prone bottleneck! |");
     info!(LOG, "------------------------------------------------");
 
-    let inbox = Path::new(INBOX);
-    let outbox = Path::new(OUTBOX);
-    let queued = Path::new(QUEUED);
-
-    let mut q = Queue::new();
-
-    for leftover in read_dir(queued)? {
-        let leftover = leftover?;
-        let path = leftover.path();
-        if path.is_file() {
-            let filename = path.file_name().unwrap().to_str().unwrap();
-            info!(LOG, "Found leftover: {}", filename);
-            q.push(Sequence::new(filename.to_string()));
-        }
-    }
-
-    loop {
-        if check_and_create_dir(inbox)? {
-            info!(
-                LOG,
-                "I had to create the inbox folder again! Whatever wasn't queued already is lost :("
-            );
-        }
-        if check_and_create_dir(queued)? {
-            info!(LOG, "I had to create the queued folder again! This means that the queue is also lost :(");
-            q.dump();
-        }
-        if check_and_create_dir(outbox)? {
-            // flush queue because if queued does not exist, queue must be empty!
-            info!(
-                LOG,
-                "I had to create the outbox folder again! I don't know what happend to your job :("
-            );
-        }
-
-        let mut changes = false;
-        // get new files
-        for file in read_dir(inbox)? {
-            let file = file?;
-            let path = file.path();
-            if path.is_file() {
-                let filename = path.file_name().unwrap().to_str().unwrap();
-                info!(LOG, "New sequence: {}", filename);
-                rename(&path, queued.join(&filename))?;
-                q.push(Sequence::new(filename.to_string()));
-                changes = true;
-            }
-        }
-
-        if is_empty(outbox)? {
-            if let Some(seq) = q.pop() {
-                rename(queued.join(&seq.name), outbox.join("external.txt"))?;
-                info!(LOG, "Scheduling: {}", seq.name);
-                changes = true;
-            }
-        }
-
-        if changes {
-            let len = q.len();
-            if len == 0 {
-                info!(LOG, "Queue empty! Hooray!");
-            } else {
-                info!(LOG, "Current length of queue: {}", q.len());
-            }
-        }
-
-        std::thread::sleep(std::time::Duration::from_millis(500));
-    }
+    Scheduler::new()
+        .inbox(INBOX)
+        .queued(QUEUED)
+        .outbox(OUTBOX)
+        .run()?;
 }
 
 fn main() {
