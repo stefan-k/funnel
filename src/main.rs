@@ -162,7 +162,7 @@ fn run() -> Result<(), Error> {
             if len == 0 {
                 info!(LOG, "Queue empty! Hooray!");
             } else {
-                info!(LOG, "Current lenghth of queue: {}", q.len());
+                info!(LOG, "Current length of queue: {}", q.len());
             }
         }
 
