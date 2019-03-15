@@ -14,15 +14,12 @@
 mod queue;
 mod scheduler;
 mod sequence;
+mod utils;
 
-use crate::queue::Queue;
 use crate::scheduler::Scheduler;
-use crate::sequence::Sequence;
 use failure::Error;
 use lazy_static::lazy_static;
 use slog::{info, o, Drain};
-use std::fs::{create_dir, read_dir, rename};
-use std::path::{Path, PathBuf};
 
 const INBOX: &'static str = "inbox/";
 const OUTBOX: &'static str = "outbox/";
@@ -35,25 +32,6 @@ lazy_static! {
         let drain = slog_async::Async::new(drain).build().fuse();
         slog::Logger::root(drain, o!())
     };
-}
-
-fn is_empty(path: &Path) -> Result<bool, Error> {
-    for _ in read_dir(path)? {
-        return Ok(false);
-    }
-    Ok(true)
-}
-
-fn check_and_create_dir(dir: &Path) -> Result<bool, Error> {
-    if !dir.is_dir() {
-        info!(
-            LOG,
-            "Whoops, something went wrong, {:?} does not exist! Let me fix this for you!", dir
-        );
-        create_dir(dir)?;
-        return Ok(true);
-    }
-    Ok(false)
 }
 
 fn run() -> Result<(), Error> {

@@ -5,7 +5,14 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-use crate::*;
+use crate::queue::Queue;
+use crate::sequence::Sequence;
+use crate::utils::{check_and_create_dir, is_empty};
+use crate::LOG;
+use failure::Error;
+use slog::{info, warn};
+use std::fs::{create_dir, read_dir, rename};
+use std::path::PathBuf;
 
 pub struct Scheduler {
     inbox: PathBuf,
@@ -94,18 +101,18 @@ impl Scheduler {
 
     fn check_dirs(&mut self) -> Result<(), Error> {
         if check_and_create_dir(&self.inbox)? {
-            info!(
+            warn!(
                 LOG,
                 "I had to create the inbox folder again! Whatever wasn't queued already is lost :("
             );
         }
         if check_and_create_dir(&self.queued)? {
-            info!(LOG, "I had to create the queued folder again! This means that the queue is also lost :(");
+            warn!(LOG, "I had to create the queued folder again! This means that the queue is also lost :(");
             // flush queue because if queued does not exist, queue must be empty!
             self.q.dump();
         }
         if check_and_create_dir(&self.outbox)? {
-            info!(
+            warn!(
                 LOG,
                 "I had to create the outbox folder again! I don't know what happend to your job :("
             );
@@ -124,7 +131,7 @@ impl Scheduler {
                 info!(LOG, "New sequence: {}", filename);
                 rename(&path, &self.queued.join(&filename))?;
                 if !self.q.push(Sequence::new(filename.to_string())) {
-                    info!(LOG, "File {} already in queue!", filename);
+                    warn!(LOG, "File {} already in queue!", filename);
                 }
                 changes = true;
             }
