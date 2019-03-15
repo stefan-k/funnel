@@ -1,8 +1,20 @@
 [package]
 name = "funnel"
-version = "0.1.0"
+version = "0.0.0"
 authors = ["Stefan Kroboth <stefan.kroboth@gmail.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "A likely error-prone bottleneck"
+documentation = "https://stefan-k.github.io/funnel/funnel"
+repository = "https://github.com/stefan-k/funnel"
+readme = "README.md"
+keywords = ["bottleneck"]
+categories = ["cli"]
+#license-file = "LICENSE-APACHE"
+exclude = [ 
+	".travis.yml",
+	"push_docs",
+]
 
 [dependencies]
 failure = "*"
