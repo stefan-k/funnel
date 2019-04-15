@@ -5,6 +5,7 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+use crate::accounting::Accounting;
 use crate::queue::Queue;
 use crate::sequence::Sequence;
 use crate::utils::{check_and_create_dir, is_empty};
@@ -19,6 +20,7 @@ pub struct Scheduler {
     queued: PathBuf,
     outbox: PathBuf,
     q: Queue,
+    // accounting: Accounting,
 }
 
 impl Scheduler {

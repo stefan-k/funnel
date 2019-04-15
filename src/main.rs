@@ -11,6 +11,7 @@
 
 #![feature(never_type)]
 
+mod accounting;
 mod queue;
 mod scheduler;
 mod sequence;
