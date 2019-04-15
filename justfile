@@ -10,3 +10,6 @@ runfufu:
 
 runrelease:
   cargo run --release
+
+finseq:
+  rm outbox/external.txt

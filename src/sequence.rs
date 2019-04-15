@@ -7,15 +7,20 @@
 
 #[derive(Eq, PartialEq)]
 pub struct Sequence {
+    user: String,
     name: String,
 }
 
 impl Sequence {
-    pub fn new(name: String) -> Self {
-        Sequence { name }
+    pub fn new(user: String, name: String) -> Self {
+        Sequence { user, name }
     }
 
     pub fn get_name(&self) -> String {
         self.name.clone()
+    }
+
+    pub fn get_user(&self) -> String {
+        self.user.clone()
     }
 }

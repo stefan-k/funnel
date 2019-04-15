@@ -87,13 +87,25 @@ impl Scheduler {
     }
 
     fn collect_leftovers(&mut self) -> Result<(), Error> {
-        for leftover in read_dir(&self.queued)? {
-            let leftover = leftover?;
-            let path = leftover.path();
-            if path.is_file() {
-                let filename = path.file_name().unwrap().to_str().unwrap();
-                info!(LOG, "Found leftover: {}", filename);
-                self.q.push(Sequence::new(filename.to_string()));
+        for dir in read_dir(&self.queued)? {
+            let dir = dir?;
+            let path = dir.path();
+            if path.is_dir() {
+                let user = path.file_name().unwrap().to_str().unwrap();
+                for file_path in read_dir(&path)? {
+                    let file_path = file_path?;
+                    let file_path = file_path.path();
+                    if file_path.is_file() {
+                        let filename = file_path.file_name().unwrap().to_str().unwrap();
+                        info!(LOG, "Found leftover: {}", filename);
+                        if !self
+                            .q
+                            .push(Sequence::new(user.to_string(), filename.to_string()))
+                        {
+                            warn!(LOG, "File {} already in queue!", filename);
+                        }
+                    }
+                }
             }
         }
         Ok(())
@@ -123,17 +135,31 @@ impl Scheduler {
     fn hit_refresh(&mut self) -> Result<bool, Error> {
         let mut changes = false;
         // get new files
-        for file in read_dir(&self.inbox)? {
-            let file = file?;
-            let path = file.path();
-            if path.is_file() {
-                let filename = path.file_name().unwrap().to_str().unwrap();
-                info!(LOG, "New sequence: {}", filename);
-                rename(&path, &self.queued.join(&filename))?;
-                if !self.q.push(Sequence::new(filename.to_string())) {
-                    warn!(LOG, "File {} already in queue!", filename);
+        for dir in read_dir(&self.inbox)? {
+            let dir = dir?;
+            let path = dir.path();
+            if path.is_dir() {
+                let user = path.file_name().unwrap().to_str().unwrap();
+                for file_path in read_dir(&path)? {
+                    let file_path = file_path?;
+                    let file_path = file_path.path();
+                    if file_path.is_file() {
+                        let filename = file_path.file_name().unwrap().to_str().unwrap();
+                        info!(LOG, "New sequence: {}", filename);
+                        let q_dir = self.queued.join(&user);
+                        if !q_dir.is_dir() {
+                            create_dir(&q_dir)?;
+                        }
+                        rename(&file_path, &self.queued.join(&user).join(&filename))?;
+                        if !self
+                            .q
+                            .push(Sequence::new(user.to_string(), filename.to_string()))
+                        {
+                            warn!(LOG, "File {} already in queue!", filename);
+                        }
+                        changes = true;
+                    }
                 }
-                changes = true;
             }
         }
         Ok(changes)
@@ -144,7 +170,7 @@ impl Scheduler {
         if is_empty(&self.outbox)? {
             if let Some(seq) = self.q.pop() {
                 rename(
-                    &self.queued.join(&seq.get_name()),
+                    &self.queued.join(&seq.get_user()).join(&seq.get_name()),
                     &self.outbox.join("external.txt"),
                 )?;
                 info!(LOG, "Scheduling: {}", seq.get_name());
