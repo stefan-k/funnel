@@ -10,19 +10,33 @@ use std::cmp::Ordering;
 struct User {
     name: String,
     scheduled: usize,
+    queued: usize,
 }
 
 impl User {
     pub fn new(name: String) -> Self {
-        User { name, scheduled: 1 }
+        User {
+            name,
+            scheduled: 0,
+            queued: 1,
+        }
     }
 
     pub fn get_name(&self) -> &str {
         &self.name
     }
 
-    pub fn increment(&mut self) {
+    pub fn increment_scheduled(&mut self) {
         self.scheduled += 1;
+        self.queued -= 1;
+    }
+
+    pub fn increment_queued(&mut self) {
+        self.queued += 1;
+    }
+
+    pub fn num_queued(&self) -> usize {
+        self.queued
     }
 }
 
@@ -59,7 +73,24 @@ impl Accounting {
         let mut found = false;
         for i in 0..self.users.len() {
             if self.users[i].get_name() == user {
-                self.users[i].increment();
+                self.users[i].increment_scheduled();
+                found = true;
+            }
+        }
+
+        if !found {
+            let mut user = User::new(user);
+            user.increment_scheduled();
+            self.users.push(user);
+            self.users.sort();
+        }
+    }
+
+    pub fn queued(&mut self, user: String) {
+        let mut found = false;
+        for i in 0..self.users.len() {
+            if self.users[i].get_name() == user {
+                self.users[i].increment_queued();
                 found = true;
             }
         }
@@ -71,10 +102,11 @@ impl Accounting {
     }
 
     pub fn next_user(&self) -> Option<String> {
-        if self.users.len() > 0 {
-            Some(self.users[0].get_name().to_string())
-        } else {
-            None
+        for user in &self.users {
+            if user.num_queued() > 0 {
+                return Some(user.get_name().to_string());
+            }
         }
+        None
     }
 }

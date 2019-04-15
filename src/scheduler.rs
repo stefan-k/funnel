@@ -20,7 +20,7 @@ pub struct Scheduler {
     queued: PathBuf,
     outbox: PathBuf,
     q: Queue,
-    // accounting: Accounting,
+    acc: Accounting,
 }
 
 impl Scheduler {
@@ -30,6 +30,7 @@ impl Scheduler {
             queued: PathBuf::from("queued"),
             outbox: PathBuf::from("outbox"),
             q: Queue::new(),
+            acc: Accounting::new(),
         }
     }
 
@@ -105,6 +106,8 @@ impl Scheduler {
                             .push(Sequence::new(user.to_string(), filename.to_string()))
                         {
                             warn!(LOG, "File {} already in queue!", filename);
+                        } else {
+                            self.acc.queued(user.to_string());
                         }
                     }
                 }
@@ -158,6 +161,8 @@ impl Scheduler {
                             .push(Sequence::new(user.to_string(), filename.to_string()))
                         {
                             warn!(LOG, "File {} already in queue!", filename);
+                        } else {
+                            self.acc.queued(user.to_string());
                         }
                         changes = true;
                     }
@@ -170,13 +175,16 @@ impl Scheduler {
     fn schedule(&mut self) -> Result<bool, Error> {
         let mut changes = false;
         if is_empty(&self.outbox)? {
-            if let Some(seq) = self.q.pop() {
-                rename(
-                    &self.queued.join(&seq.get_user()).join(&seq.get_name()),
-                    &self.outbox.join("external.txt"),
-                )?;
-                info!(LOG, "Scheduling: {}", seq.get_name());
-                changes = true;
+            if let Some(user) = self.acc.next_user() {
+                if let Some(seq) = self.q.seq_by_user(user) {
+                    rename(
+                        &self.queued.join(&seq.get_user()).join(&seq.get_name()),
+                        &self.outbox.join("external.txt"),
+                    )?;
+                    self.acc.scheduled(seq.get_user());
+                    info!(LOG, "Scheduling: {}", seq.get_name());
+                    changes = true;
+                }
             }
         }
         Ok(changes)

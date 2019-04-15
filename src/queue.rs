@@ -24,13 +24,13 @@ impl Queue {
         false
     }
 
-    pub fn pop(&mut self) -> Option<Sequence> {
-        if self.q.len() > 0 {
-            Some(self.q.remove(0))
-        } else {
-            None
-        }
-    }
+    // pub fn pop(&mut self) -> Option<Sequence> {
+    //     if self.q.len() > 0 {
+    //         Some(self.q.remove(0))
+    //     } else {
+    //         None
+    //     }
+    // }
 
     pub fn len(&self) -> usize {
         self.q.len()
@@ -38,5 +38,14 @@ impl Queue {
 
     pub fn dump(&mut self) {
         self.q = vec![];
+    }
+
+    pub fn seq_by_user(&mut self, user: String) -> Option<Sequence> {
+        for idx in 0..self.q.len() {
+            if user == self.q[idx].get_user() {
+                return Some(self.q.remove(idx));
+            }
+        }
+        return None;
     }
 }
