@@ -10,8 +10,10 @@
 //! A likely error-prone bottleneck.
 
 #![feature(never_type)]
+#![allow(dead_code)]
 
 mod accounting;
+mod backend;
 mod queue;
 mod scheduler;
 mod sequence;
