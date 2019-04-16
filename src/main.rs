@@ -16,17 +16,12 @@ mod accounting;
 mod backend;
 mod queue;
 mod scheduler;
-mod sequence;
 mod utils;
 
 use crate::scheduler::Scheduler;
 use failure::Error;
 use lazy_static::lazy_static;
 use slog::{info, o, Drain};
-
-const INBOX: &'static str = "inbox/";
-const OUTBOX: &'static str = "outbox/";
-const QUEUED: &'static str = "queued/";
 
 lazy_static! {
     static ref LOG: slog::Logger = {
@@ -43,11 +38,7 @@ fn run() -> Result<(), Error> {
     info!(LOG, "| I'm funnel, a likely error-prone bottleneck! |");
     info!(LOG, "------------------------------------------------");
 
-    Scheduler::new()
-        .inbox(INBOX)
-        .queued(QUEUED)
-        .outbox(OUTBOX)
-        .run()?;
+    Scheduler::new().run()?;
 }
 
 fn main() {

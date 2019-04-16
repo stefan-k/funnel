@@ -5,12 +5,16 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+use crate::utils::is_empty;
+use crate::LOG;
 use failure::Error;
+use slog::info;
 use std::fs::{create_dir, read_dir, rename};
 use std::path::PathBuf;
+// use slog::{info, warn};
 
-#[derive(Eq, PartialEq, Clone, Ord, PartialOrd)]
-enum JobStatus {
+#[derive(Eq, PartialEq, Clone, Ord, PartialOrd, Copy)]
+pub enum JobStatus {
     Inbox,
     Queued,
     Running,
@@ -32,6 +36,7 @@ impl User {
     }
 }
 
+#[derive(Eq, PartialEq, Clone, Ord, PartialOrd)]
 pub struct Job {
     user: User,
     id: String,
@@ -39,11 +44,11 @@ pub struct Job {
 }
 
 impl Job {
-    pub fn new<S: Into<String>>(user: User, id: S) -> Job {
+    pub fn new<S: Into<String>>(user: User, id: S, status: JobStatus) -> Job {
         Job {
             user,
             id: id.into(),
-            status: JobStatus::Inbox,
+            status,
         }
     }
 
@@ -53,6 +58,10 @@ impl Job {
 
     pub fn id(&self) -> String {
         self.id.clone()
+    }
+
+    pub fn status(&self) -> JobStatus {
+        self.status
     }
 
     pub fn from_inbox_to_queued(&mut self) -> &mut Self {
@@ -75,12 +84,14 @@ impl Job {
 }
 
 pub trait Backend {
+    fn initial_log(&self);
     fn initialize(&self) -> Result<(), Error>;
     fn check_inbox(&self) -> Result<Vec<Job>, Error>;
     fn check_queued(&self) -> Result<Vec<Job>, Error>;
     fn from_inbox_to_queued(&self, job: Job) -> Result<Job, Error>;
     fn from_queued_to_running(&self, job: Job) -> Result<Job, Error>;
     fn from_running_to_finished(&self, job: Job) -> Result<Job, Error>;
+    fn something_running(&self) -> Result<bool, Error>;
 }
 
 pub struct Filesystem {
@@ -100,6 +111,13 @@ impl Filesystem {
 }
 
 impl Backend for Filesystem {
+    fn initial_log(&self) {
+        info!(LOG, "Your choices for the directories were: ");
+        info!(LOG, ""; "inbox" => self.inbox.to_str().unwrap(),
+                       "queued" => self.queued.to_str().unwrap(),
+                       "outbox" => self.outbox.to_str().unwrap());
+    }
+
     fn initialize(&self) -> Result<(), Error> {
         if !self.inbox.is_dir() {
             create_dir(&self.inbox)?;
@@ -126,7 +144,7 @@ impl Backend for Filesystem {
                     // only files
                     if job_name.is_file() {
                         let job_name = job_name.file_name().unwrap().to_str().unwrap();
-                        out.push(Job::new(User::new(user), job_name));
+                        out.push(Job::new(User::new(user), job_name, JobStatus::Inbox));
                     }
                 }
             }
@@ -147,7 +165,7 @@ impl Backend for Filesystem {
                     // only files
                     if job_name.is_file() {
                         let job_name = job_name.file_name().unwrap().to_str().unwrap();
-                        out.push(Job::new(User::new(user), job_name));
+                        out.push(Job::new(User::new(user), job_name, JobStatus::Queued));
                     }
                 }
             }
@@ -157,25 +175,30 @@ impl Backend for Filesystem {
 
     fn from_inbox_to_queued(&self, mut job: Job) -> Result<Job, Error> {
         job.from_inbox_to_queued();
-        let from = self.inbox.join(job.user().to_string());
-        let to = self.queued.join(job.user().to_string());
+        let from = self.inbox.join(job.user().to_string()).join(job.id());
+        let out_dir = self.queued.join(job.user().to_string());
+        if !out_dir.is_dir() {
+            create_dir(&out_dir)?;
+        }
+        let to = self.queued.join(job.user().to_string()).join(job.id());
         rename(&from, &to)?;
         Ok(job)
     }
 
     fn from_queued_to_running(&self, mut job: Job) -> Result<Job, Error> {
         job.from_queued_to_running();
-        let from = self.queued.join(job.user().to_string());
-        let to = self.outbox.join(job.user().to_string());
+        let from = self.queued.join(job.user().to_string()).join(job.id());
+        let to = self.outbox.join("external.seq");
         rename(&from, &to)?;
         Ok(job)
     }
 
     fn from_running_to_finished(&self, mut job: Job) -> Result<Job, Error> {
         job.from_running_to_finished();
-        // let from = self.outbox.join(job.user().to_string());
-        // let to = self.outbox.join(job.user().to_string());
-        // rename(&from, &to)?;
         Ok(job)
+    }
+
+    fn something_running(&self) -> Result<bool, Error> {
+        Ok(!is_empty(&self.outbox)?)
     }
 }

@@ -12,4 +12,4 @@ runrelease:
   cargo run --release
 
 finseq:
-  rm outbox/external.txt
+  rm outbox/external.seq
