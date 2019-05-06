@@ -111,7 +111,7 @@ impl Scheduler {
                 } else {
                     // Since `next_user` is only giving us a user with a non-empty queue, this
                     // should not happen. If it does happen, do investigate.
-                    panic!("This should not happen! Investigate!");
+                    //panic!("This should not happen! Investigate!");
                 }
             }
         }

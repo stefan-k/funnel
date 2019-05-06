@@ -9,7 +9,7 @@ use crate::utils::is_empty;
 use crate::LOG;
 use failure::Error;
 use slog::info;
-use std::fs::{create_dir, read_dir, rename};
+use std::fs::{create_dir, read_dir, rename,copy,remove_file};
 use std::path::PathBuf;
 // use slog::{info, warn};
 
@@ -103,9 +103,9 @@ pub struct Filesystem {
 impl Filesystem {
     pub fn new() -> Filesystem {
         Filesystem {
-            inbox: PathBuf::from("inbox"),
-            queued: PathBuf::from("queued"),
-            outbox: PathBuf::from("outbox"),
+            inbox: PathBuf::from("/dropbox/Dropbox/inbox"),
+            queued: PathBuf::from("/dropbox/Dropbox/queued"),
+            outbox: PathBuf::from("/dropbox/mars"),
         }
     }
 }
@@ -189,7 +189,9 @@ impl Backend for Filesystem {
         job.from_queued_to_running();
         let from = self.queued.join(job.user().to_string()).join(job.id());
         let to = self.outbox.join("external.seq");
-        rename(&from, &to)?;
+        //rename(&from, &to)?;
+        copy(&from, &to)?;
+        remove_file(&from)?;
         Ok(job)
     }
 
