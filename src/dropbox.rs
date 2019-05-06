@@ -5,33 +5,27 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-// use failure::Error;
 use shellfn::shell;
-use std::error::Error;
 
-enum DropboxStatus {
+#[derive(Eq, PartialEq, Copy, Clone)]
+pub enum DropboxStatus {
     UpToDate,
     Syncing,
 }
 
-impl std::str::FromStr for DropboxStatus {
-    type Err = Box<Error>;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "up to date" {
-            Ok(DropboxStatus::UpToDate)
-        } else if s == "sync" {
-            Ok(DropboxStatus::Syncing)
-        } else {
-            // panic!("Unknown response from dropbox-cli.")
-            Err("Unkown response from dropbox-cli".into())
-        }
+pub fn dropbox_filestatus(dir: &str) -> DropboxStatus {
+    let info = dropbox_filestatus_int(dir);
+    //println!("|{:?}|", info);
+    if info == " up to date\n" {
+        DropboxStatus::UpToDate
+    } else {
+        DropboxStatus::Syncing
     }
 }
 
 #[shell]
-pub fn dropbox_filestatus(dir: &str) -> String {
+fn dropbox_filestatus_int(dir: &str) -> String {
     r#"
-    dropbox-cli filestatus $DIR
+    dropbox-cli filestatus $DIR | awk '{split($0,a,":"); print a[2]}'
     "#
 }

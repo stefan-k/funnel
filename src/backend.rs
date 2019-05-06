@@ -11,6 +11,7 @@ use failure::Error;
 use slog::info;
 use std::fs::{create_dir, read_dir, rename,copy,remove_file};
 use std::path::PathBuf;
+use crate::dropbox::{dropbox_filestatus, DropboxStatus};
 // use slog::{info, warn};
 
 #[derive(Eq, PartialEq, Clone, Ord, PartialOrd, Copy)]
@@ -143,8 +144,10 @@ impl Backend for Filesystem {
                     let job_name = job_name?.path();
                     // only files
                     if job_name.is_file() {
-                        let job_name = job_name.file_name().unwrap().to_str().unwrap();
-                        out.push(Job::new(User::new(user), job_name, JobStatus::Inbox));
+                        if dropbox_filestatus(job_name.to_str().unwrap()) == DropboxStatus::UpToDate {
+                            let job_name = job_name.file_name().unwrap().to_str().unwrap();
+                            out.push(Job::new(User::new(user), job_name, JobStatus::Inbox));
+                        }
                     }
                 }
             }
