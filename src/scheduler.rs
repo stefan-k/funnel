@@ -43,6 +43,8 @@ impl Scheduler {
             // Iterate over leftovers
             .into_iter()
             .map(|x| -> Result<(), Error> {
+                // Just to be safe, wait a bit!
+                std::thread::sleep(std::time::Duration::from_millis(250));
                 // Tell everyone about the discovery
                 info!(LOG, "Leftover {} by user {}.", x.id(), x.user().to_string());
                 // Tell accounting about it
@@ -67,6 +69,8 @@ impl Scheduler {
                 .check_inbox()?
                 .into_iter()
                 .map(|x| -> Result<(), Error> {
+                    // Just to be safe, wait a bit!
+                    std::thread::sleep(std::time::Duration::from_millis(250));
                     // Tell everyone that a new job was found
                     info!(LOG, "New job {} by user {}.", x.id(), x.user().to_string());
                     // Acknowledge the job's existence and queue it
